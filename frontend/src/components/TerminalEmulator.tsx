@@ -77,6 +77,11 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
 
     // WebSocket connection
     const connectWebSocket = () => {
+      // Prevent duplicate connections
+      if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
+        return;
+      }
+
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(`${protocol}//${window.location.host}/api/v1/ws/terminal/${sessionId}`);
 
@@ -105,8 +110,6 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
       wsRef.current = ws;
     };
 
-    connectWebSocket();
-
     // Handle keyboard input
     terminal.onData((data) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -117,7 +120,13 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
       }
     });
 
+    // Small delay to avoid race condition in React StrictMode
+    const timer = setTimeout(() => {
+      connectWebSocket();
+    }, 100);
+
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('resize', handleResize);
       wsRef.current?.close();
       terminal.dispose();
