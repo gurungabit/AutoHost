@@ -118,14 +118,6 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
     const terminal = xtermRef.current;
     if (!terminal) return;
 
-    console.log('Updating screen:', {
-      rows: screenData.rows,
-      cols: screenData.cols,
-      cursor: [screenData.cursor_row, screenData.cursor_col],
-      textLength: screenData.text?.length || 0,
-      textPreview: screenData.text?.substring(0, 100)
-    });
-
     // Resize terminal if needed
     if (terminal.rows !== screenData.rows || terminal.cols !== screenData.cols) {
       terminal.resize(screenData.cols, screenData.rows);

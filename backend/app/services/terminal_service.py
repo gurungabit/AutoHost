@@ -136,15 +136,22 @@ class TerminalSession:
                     pass
 
             # Get full screen text using Ascii
+            # Ascii() returns list like: ['data: line1', 'data: line2', ...]
+            # We need to strip the 'data: ' prefix
             screen_lines = self.connection.Ascii()
-            text = '\n'.join(screen_lines) if isinstance(screen_lines, list) else str(screen_lines)
 
-            # Debug logging
-            import sys
-            print(f"[DEBUG] Screen query status: {status}", file=sys.stderr)
-            print(f"[DEBUG] Parsed - rows: {rows}, cols: {cols}, cursor: ({cursor_row}, {cursor_col})", file=sys.stderr)
-            print(f"[DEBUG] Screen lines type: {type(screen_lines)}, count: {len(screen_lines) if isinstance(screen_lines, list) else 'N/A'}", file=sys.stderr)
-            print(f"[DEBUG] Text length: {len(text)}, preview: {text[:100] if text else 'EMPTY'}", file=sys.stderr)
+            if isinstance(screen_lines, list):
+                # Strip 'data: ' prefix if present and filter status lines
+                cleaned_lines = []
+                for line in screen_lines:
+                    if isinstance(line, str):
+                        if line.startswith('data: '):
+                            cleaned_lines.append(line[6:])  # Remove 'data: ' prefix
+                        elif not line.startswith(('ok', 'error')):
+                            cleaned_lines.append(line)
+                text = '\n'.join(cleaned_lines)
+            else:
+                text = str(screen_lines)
 
             # Get field information
             fields = []

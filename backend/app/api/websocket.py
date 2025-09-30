@@ -77,7 +77,7 @@ async def send_screen_updates(websocket: WebSocket, session_id: str):
                         "message": str(e)
                     })
 
-            await asyncio.sleep(0.1)  # Update every 100ms
+            await asyncio.sleep(1.0)  # Update every 1 second
     except asyncio.CancelledError:
         pass
 
