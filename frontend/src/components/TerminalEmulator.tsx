@@ -42,16 +42,22 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
 
     // Ensure container has dimensions before opening
     const container = terminalRef.current;
-    if (container.offsetHeight === 0) {
-      container.style.height = '600px';
-    }
+
+    // Give container explicit height for terminal to render into
+    container.style.height = '100%';
 
     terminal.open(container);
 
-    // Don't use fit addon - keep the terminal at exactly 24x80 for 3270 compatibility
-    // setTimeout(() => {
-    //   fitAddon.fit();
-    // }, 0);
+    // Wait a moment then fit the terminal to the container
+    setTimeout(() => {
+      if (fitAddonRef.current && container.offsetHeight > 0) {
+        try {
+          fitAddonRef.current.fit();
+        } catch (e) {
+          console.warn('Fit failed:', e);
+        }
+      }
+    }, 100);
 
     xtermRef.current = terminal;
     fitAddonRef.current = fitAddon;
@@ -112,11 +118,15 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
 
     // Handle keyboard input
     terminal.onData((data) => {
+      console.log('Terminal input:', data, 'charCodes:', Array.from(data).map(c => c.charCodeAt(0)));
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({
           command: 'input',
           text: data,
         }));
+        console.log('Sent to backend via WebSocket');
+      } else {
+        console.warn('WebSocket not open, cannot send input');
       }
     });
 
@@ -137,8 +147,19 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
     const terminal = xtermRef.current;
     if (!terminal) return;
 
+    console.log('Screen update received:', {
+      rows: screenData.rows,
+      cols: screenData.cols,
+      cursor: [screenData.cursor_row, screenData.cursor_col],
+      textLength: screenData.text?.length || 0,
+      lines: screenData.text?.split('\n').length || 0,
+      hasContent: (screenData.text?.replace(/\s/g, '').length || 0) > 0,
+      preview: screenData.text?.substring(0, 200)
+    });
+
     // Resize terminal if needed
     if (terminal.rows !== screenData.rows || terminal.cols !== screenData.cols) {
+      console.log(`Resizing terminal from ${terminal.rows}x${terminal.cols} to ${screenData.rows}x${screenData.cols}`);
       terminal.resize(screenData.cols, screenData.rows);
     }
 
@@ -147,6 +168,7 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
 
     // Write screen text line by line
     const lines = screenData.text.split('\n');
+    console.log(`Writing ${lines.length} lines to terminal`);
     lines.forEach((line, index) => {
       if (index > 0) {
         terminal.write('\r\n');
@@ -180,17 +202,16 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
   };
 
   return (
-    <div className="relative h-full">
+    <div className="relative w-full h-full flex flex-col">
       <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs z-10 ${isConnected ? 'bg-green-600' : 'bg-red-600'} text-white`}>
         {isConnected ? 'Connected' : 'Disconnected'}
       </div>
       <div
         ref={terminalRef}
-        className="border border-gray-700 rounded h-full"
+        className="border border-gray-700 rounded flex-1"
         onClick={handleTerminalClick}
         style={{
           cursor: recordMode ? 'crosshair' : 'text',
-          minHeight: '600px',
         }}
       />
     </div>
