@@ -157,23 +157,19 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
       preview: screenData.text?.substring(0, 200)
     });
 
-    // Resize terminal if needed
-    if (terminal.rows !== screenData.rows || terminal.cols !== screenData.cols) {
-      console.log(`Resizing terminal from ${terminal.rows}x${terminal.cols} to ${screenData.rows}x${screenData.cols}`);
-      terminal.resize(screenData.cols, screenData.rows);
-    }
-
-    // Clear terminal and reset cursor
+    // Clear and reset the terminal completely
+    terminal.clear();
     terminal.reset();
 
-    // Write screen text line by line
+    // Write each line with explicit positioning
     const lines = screenData.text.split('\n');
     console.log(`Writing ${lines.length} lines to terminal`);
+
     lines.forEach((line, index) => {
-      if (index > 0) {
-        terminal.write('\r\n');
-      }
-      terminal.write(line);
+      // Move to the start of each line
+      terminal.write(`\x1b[${index + 1};1H`);
+      // Write the line content, ensuring it's visible
+      terminal.write(line.replace(/\0/g, ' ')); // Replace null chars with spaces
     });
 
     // Move cursor to correct position

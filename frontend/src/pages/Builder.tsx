@@ -113,13 +113,13 @@ export function Builder() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="h-screen bg-gray-100 dark:bg-gray-900 p-6 flex flex-col">
+      <div className="max-w-7xl mx-auto flex-1 flex flex-col">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
           3270 Terminal Automation Builder
         </h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-12rem)]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
           {/* Left Panel: Connection & Terminal */}
           <div className="flex flex-col gap-6">
             {!sessionId ? (
