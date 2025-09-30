@@ -33,11 +33,21 @@ class TerminalSession:
 
     def _sync_connect(self):
         """Synchronous connection (runs in executor)"""
+        import sys
         self.connection = Emulator(visible=False)
         # Build connection string with TLS if needed
         protocol = "L:" if self.use_tls else ""
         host_string = f"{protocol}{self.host}:{self.port}"
+        print(f"[DEBUG] Connecting to: {host_string}", file=sys.stderr)
         self.connection.Connect(host_string)
+
+        # Wait for screen to be ready
+        try:
+            self.connection.Wait('InputField')  # Wait for input field to appear
+            print(f"[DEBUG] Connection established, screen ready", file=sys.stderr)
+        except Exception as e:
+            print(f"[DEBUG] Wait failed (this is normal for some screens): {e}", file=sys.stderr)
+            pass
 
     async def disconnect(self):
         """Disconnect from the host"""
@@ -140,6 +150,14 @@ class TerminalSession:
             # We need to strip the 'data: ' prefix
             screen_lines = self.connection.Ascii()
 
+            import sys
+            print(f"[DEBUG] Ascii() returned type: {type(screen_lines)}", file=sys.stderr)
+            if isinstance(screen_lines, list):
+                print(f"[DEBUG] Number of lines: {len(screen_lines)}", file=sys.stderr)
+                if len(screen_lines) > 0:
+                    print(f"[DEBUG] First line: {screen_lines[0]!r}", file=sys.stderr)
+                    print(f"[DEBUG] Last line: {screen_lines[-1]!r}", file=sys.stderr)
+
             if isinstance(screen_lines, list):
                 # Strip 'data: ' prefix if present and filter status lines
                 cleaned_lines = []
@@ -150,8 +168,10 @@ class TerminalSession:
                         elif not line.startswith(('ok', 'error')):
                             cleaned_lines.append(line)
                 text = '\n'.join(cleaned_lines)
+                print(f"[DEBUG] Cleaned text length: {len(text)}, lines: {len(cleaned_lines)}", file=sys.stderr)
             else:
                 text = str(screen_lines)
+                print(f"[DEBUG] Screen text (as string): {text[:100]}", file=sys.stderr)
 
             # Get field information
             fields = []
