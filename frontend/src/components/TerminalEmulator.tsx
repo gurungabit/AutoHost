@@ -170,14 +170,18 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
 
   return (
     <div className="relative">
-      <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs ${isConnected ? 'bg-green-600' : 'bg-red-600'} text-white`}>
+      <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs z-10 ${isConnected ? 'bg-green-600' : 'bg-red-600'} text-white`}>
         {isConnected ? 'Connected' : 'Disconnected'}
       </div>
       <div
         ref={terminalRef}
         className="border border-gray-700 rounded"
         onClick={handleTerminalClick}
-        style={{ cursor: recordMode ? 'crosshair' : 'text' }}
+        style={{
+          cursor: recordMode ? 'crosshair' : 'text',
+          minHeight: '500px',
+          width: '100%'
+        }}
       />
     </div>
   );
