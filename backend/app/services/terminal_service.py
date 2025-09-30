@@ -156,6 +156,8 @@ class TerminalSession:
                 print(f"[DEBUG] Number of lines: {len(screen_lines)}", file=sys.stderr)
                 if len(screen_lines) > 0:
                     print(f"[DEBUG] First line: {screen_lines[0]!r}", file=sys.stderr)
+                    if len(screen_lines) > 12:
+                        print(f"[DEBUG] Middle line (12): {screen_lines[12]!r}", file=sys.stderr)
                     print(f"[DEBUG] Last line: {screen_lines[-1]!r}", file=sys.stderr)
 
             if isinstance(screen_lines, list):
