@@ -87,6 +87,7 @@ The frontend will be available at `http://localhost:5173`
 ### 2. Build Automation
 
 **Manual Mode:**
+
 - Click "+ Add Step" to create automation steps
 - Configure each step with:
   - Action type (send text, send key, wait, assert, etc.)
@@ -95,6 +96,7 @@ The frontend will be available at `http://localhost:5173`
   - Timeout values
 
 **Record Mode:**
+
 - Enable "Record Mode" toggle
 - Click on the terminal to capture coordinates
 - A step editor will open with pre-filled coordinates
@@ -130,6 +132,7 @@ The frontend will be available at `http://localhost:5173`
 ## API Endpoints
 
 ### Connections
+
 - `POST /api/v1/connections/connect` - Connect to host
 - `POST /api/v1/connections/disconnect/{session_id}` - Disconnect
 - `GET /api/v1/connections/sessions` - List active sessions
@@ -137,6 +140,7 @@ The frontend will be available at `http://localhost:5173`
 - `POST /api/v1/connections/input` - Send input to terminal
 
 ### Automation
+
 - `GET /api/v1/automation/scripts` - List all scripts
 - `GET /api/v1/automation/scripts/{id}` - Get script by ID
 - `POST /api/v1/automation/scripts` - Create new script
@@ -145,11 +149,13 @@ The frontend will be available at `http://localhost:5173`
 - `POST /api/v1/automation/execute/{id}` - Execute script
 
 ### WebSocket
+
 - `WS /api/v1/ws/terminal/{session_id}` - Real-time terminal streaming
 
 ## Technology Stack
 
 ### Backend
+
 - **FastAPI** - Modern Python web framework
 - **UV** - Fast Python package manager
 - **tnz** - IBM 3270 terminal emulator library
@@ -158,6 +164,7 @@ The frontend will be available at `http://localhost:5173`
 - **Uvicorn** - ASGI server
 
 ### Frontend
+
 - **React 18** - UI framework
 - **TypeScript** - Type safety
 - **Vite** - Build tool
@@ -210,9 +217,10 @@ To create a clean zip archive (excluding dependencies and build artifacts):
 ```
 
 This will create a timestamped zip file like `AutoHost_20250930_143022.zip` that excludes:
+
 - node_modules
 - .venv, venv, ENV
-- __pycache__, .pyc files
+- **pycache**, .pyc files
 - .git
 - dist, build folders
 - Log files and scripts
@@ -244,29 +252,26 @@ LOGS_DIR=../logs
 ## Troubleshooting
 
 ### Connection Issues
+
 - Verify host address and port
 - Check firewall rules
 - Ensure TLS settings match host requirements
 - Review backend logs for connection errors
 
 ### WebSocket Issues
+
 - Check browser console for errors
 - Verify proxy configuration in `vite.config.ts`
 - Ensure backend is running
 
 ### Terminal Display Issues
+
 - Clear browser cache
 - Check xterm.js version compatibility
 - Verify screen dimensions in terminal settings
-
-## License
-
-MIT
 
 ## Contributing
 
 Contributions welcome! Please open an issue or submit a pull request.
 
 ## Support
-
-For issues and questions, please open a GitHub issue.
