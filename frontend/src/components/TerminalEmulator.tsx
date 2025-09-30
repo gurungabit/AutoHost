@@ -40,8 +40,18 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(webLinksAddon);
 
-    terminal.open(terminalRef.current);
-    fitAddon.fit();
+    // Ensure container has dimensions before opening
+    const container = terminalRef.current;
+    if (container.offsetHeight === 0) {
+      container.style.height = '500px';
+    }
+
+    terminal.open(container);
+
+    // Fit after a brief delay to ensure DOM is ready
+    setTimeout(() => {
+      fitAddon.fit();
+    }, 0);
 
     xtermRef.current = terminal;
     fitAddonRef.current = fitAddon;
