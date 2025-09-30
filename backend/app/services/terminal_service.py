@@ -139,6 +139,13 @@ class TerminalSession:
             screen_lines = self.connection.Ascii()
             text = '\n'.join(screen_lines) if isinstance(screen_lines, list) else str(screen_lines)
 
+            # Debug logging
+            import sys
+            print(f"[DEBUG] Screen query status: {status}", file=sys.stderr)
+            print(f"[DEBUG] Parsed - rows: {rows}, cols: {cols}, cursor: ({cursor_row}, {cursor_col})", file=sys.stderr)
+            print(f"[DEBUG] Screen lines type: {type(screen_lines)}, count: {len(screen_lines) if isinstance(screen_lines, list) else 'N/A'}", file=sys.stderr)
+            print(f"[DEBUG] Text length: {len(text)}, preview: {text[:100] if text else 'EMPTY'}", file=sys.stderr)
+
             # Get field information
             fields = []
 

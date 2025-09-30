@@ -118,11 +118,30 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
     const terminal = xtermRef.current;
     if (!terminal) return;
 
-    // Clear terminal
-    terminal.clear();
+    console.log('Updating screen:', {
+      rows: screenData.rows,
+      cols: screenData.cols,
+      cursor: [screenData.cursor_row, screenData.cursor_col],
+      textLength: screenData.text?.length || 0,
+      textPreview: screenData.text?.substring(0, 100)
+    });
 
-    // Write screen text
-    terminal.write(screenData.text);
+    // Resize terminal if needed
+    if (terminal.rows !== screenData.rows || terminal.cols !== screenData.cols) {
+      terminal.resize(screenData.cols, screenData.rows);
+    }
+
+    // Clear terminal and reset cursor
+    terminal.reset();
+
+    // Write screen text line by line
+    const lines = screenData.text.split('\n');
+    lines.forEach((line, index) => {
+      if (index > 0) {
+        terminal.write('\r\n');
+      }
+      terminal.write(line);
+    });
 
     // Move cursor to correct position
     terminal.write(`\x1b[${screenData.cursor_row + 1};${screenData.cursor_col + 1}H`);
