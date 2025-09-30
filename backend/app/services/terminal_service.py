@@ -1,7 +1,8 @@
 import uuid
 import asyncio
+import re
 from typing import Optional
-from tnz import ati
+from tnz.py3270 import Emulator
 from app.schemas.automation import ScreenData
 
 
@@ -13,7 +14,7 @@ class TerminalSession:
         self.host = host
         self.port = port
         self.use_tls = use_tls
-        self.connection: Optional[ati.Ati] = None
+        self.connection: Optional[Emulator] = None
         self.is_connected = False
 
     async def connect(self):
@@ -32,18 +33,17 @@ class TerminalSession:
 
     def _sync_connect(self):
         """Synchronous connection (runs in executor)"""
-        self.connection = ati.Ati()
-        # Connect with or without TLS
-        if self.use_tls:
-            self.connection.connect(f"{self.host}:{self.port}", tls=True)
-        else:
-            self.connection.connect(f"{self.host}:{self.port}")
+        self.connection = Emulator(visible=False)
+        # Build connection string with TLS if needed
+        protocol = "L:" if self.use_tls else ""
+        host_string = f"{protocol}{self.host}:{self.port}"
+        self.connection.Connect(host_string)
 
     async def disconnect(self):
         """Disconnect from the host"""
         if self.connection:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.connection.disconnect)
+            await loop.run_in_executor(None, self.connection.Disconnect)
             self.is_connected = False
 
     async def send_text(self, text: str, row: Optional[int] = None, col: Optional[int] = None):
@@ -55,9 +55,9 @@ class TerminalSession:
 
         def _send():
             if row is not None and col is not None:
-                # Move cursor then send text
-                self.connection.move_to(row, col)
-            self.connection.send_text(text)
+                # Move cursor then send text (rows/cols are 0-indexed in API, 1-indexed in emulator)
+                self.connection.MoveCursor(row + 1, col + 1)
+            self.connection.String(text)
 
         await loop.run_in_executor(None, _send)
 
@@ -69,20 +69,30 @@ class TerminalSession:
         loop = asyncio.get_event_loop()
 
         def _send():
-            # Map common key names to tnz key codes
-            key_map = {
-                "enter": "Enter",
-                "pf1": "PF1", "pf2": "PF2", "pf3": "PF3",
-                "pf4": "PF4", "pf5": "PF5", "pf6": "PF6",
-                "pf7": "PF7", "pf8": "PF8", "pf9": "PF9",
-                "pf10": "PF10", "pf11": "PF11", "pf12": "PF12",
-                "pa1": "PA1", "pa2": "PA2", "pa3": "PA3",
-                "clear": "Clear",
-                "tab": "Tab",
-                "backtab": "BackTab",
-            }
-            tnz_key = key_map.get(key.lower(), key)
-            self.connection.send_key(tnz_key)
+            key_lower = key.lower()
+            # Handle Enter
+            if key_lower == "enter":
+                self.connection.Enter()
+            # Handle PF keys
+            elif key_lower.startswith("pf"):
+                num = int(key_lower[2:])
+                self.connection.PF(num)
+            # Handle PA keys
+            elif key_lower.startswith("pa"):
+                num = int(key_lower[2:])
+                self.connection.PA(num)
+            # Handle Clear
+            elif key_lower == "clear":
+                self.connection.Clear()
+            # Handle Tab
+            elif key_lower == "tab":
+                self.connection.Tab()
+            # Handle BackTab
+            elif key_lower == "backtab":
+                self.connection.BackTab()
+            else:
+                # Fallback to Key method
+                self.connection.Key(key)
 
         await loop.run_in_executor(None, _send)
 
@@ -92,7 +102,8 @@ class TerminalSession:
             raise Exception("Not connected")
 
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self.connection.move_to, row, col)
+        # Convert 0-indexed to 1-indexed
+        await loop.run_in_executor(None, self.connection.MoveCursor, row + 1, col + 1)
 
     async def get_screen_data(self) -> ScreenData:
         """Get current screen data"""
@@ -102,19 +113,34 @@ class TerminalSession:
         loop = asyncio.get_event_loop()
 
         def _get_data():
-            # Get screen dimensions
-            rows = self.connection.screen_rows
-            cols = self.connection.screen_cols
+            # Query screen status to get dimensions and cursor position
+            # Format: 'L U U N N ? 24 80 0 0 0x00 -'
+            # Positions: ... rows cols cursor_row cursor_col ...
+            status = self.connection.Query('Cursor')
+            status_line = status[1] if len(status) > 1 else ""
+            parts = status_line.split()
 
-            # Get cursor position
-            cursor_row, cursor_col = self.connection.cursor_position
+            # Default values
+            rows = 24
+            cols = 80
+            cursor_row = 0
+            cursor_col = 0
 
-            # Get full screen text
-            text = self.connection.screen_text
+            if len(parts) >= 10:
+                try:
+                    rows = int(parts[6])
+                    cols = int(parts[7])
+                    cursor_row = int(parts[8])
+                    cursor_col = int(parts[9])
+                except (ValueError, IndexError):
+                    pass
+
+            # Get full screen text using Ascii
+            screen_lines = self.connection.Ascii()
+            text = '\n'.join(screen_lines) if isinstance(screen_lines, list) else str(screen_lines)
 
             # Get field information
             fields = []
-            # tnz provides field information - we can extend this
 
             return ScreenData(
                 session_id=self.session_id,
@@ -136,7 +162,12 @@ class TerminalSession:
         loop = asyncio.get_event_loop()
 
         def _read():
-            return self.connection.read_text(row, col, length)
+            # Use Ascii to get screen content and extract the text
+            screen_lines = self.connection.Ascii()
+            if isinstance(screen_lines, list) and 0 <= row < len(screen_lines):
+                line = screen_lines[row]
+                return line[col:col+length] if col < len(line) else ""
+            return ""
 
         return await loop.run_in_executor(None, _read)
 
@@ -148,15 +179,13 @@ class TerminalSession:
         loop = asyncio.get_event_loop()
 
         def _wait():
-            # Simple polling implementation
-            import time
-            start = time.time()
-            while time.time() - start < timeout:
-                screen = self.connection.screen_text
-                if text in screen:
-                    return True
-                time.sleep(0.1)
-            return False
+            try:
+                # Use Emulator's Expect method if available
+                self.connection.Expect(text, timeout=int(timeout))
+                return True
+            except:
+                # If Expect fails or times out, return False
+                return False
 
         return await loop.run_in_executor(None, _wait)
 
