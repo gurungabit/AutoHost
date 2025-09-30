@@ -119,9 +119,9 @@ export function Builder() {
           3270 Terminal Automation Builder
         </h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-12rem)]">
           {/* Left Panel: Connection & Terminal */}
-          <div className="space-y-6">
+          <div className="flex flex-col gap-6">
             {!sessionId ? (
               <ConnectionForm onConnect={handleConnect} isConnecting={isConnecting} />
             ) : (
@@ -164,17 +164,19 @@ export function Builder() {
                   </div>
                 </div>
 
-                <TerminalEmulator
-                  sessionId={sessionId}
-                  onCellClick={handleCellClick}
-                  recordMode={recordMode}
-                />
+                <div className="flex-1 min-h-0">
+                  <TerminalEmulator
+                    sessionId={sessionId}
+                    onCellClick={handleCellClick}
+                    recordMode={recordMode}
+                  />
+                </div>
               </>
             )}
           </div>
 
           {/* Right Panel: Automation Steps */}
-          <div className="space-y-6">
+          <div className="flex flex-col gap-6 overflow-y-auto">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
               <div className="flex justify-between items-center mb-4">
                 <div>

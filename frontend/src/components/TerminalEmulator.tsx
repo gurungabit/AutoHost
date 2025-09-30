@@ -43,15 +43,15 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
     // Ensure container has dimensions before opening
     const container = terminalRef.current;
     if (container.offsetHeight === 0) {
-      container.style.height = '500px';
+      container.style.height = '600px';
     }
 
     terminal.open(container);
 
-    // Fit after a brief delay to ensure DOM is ready
-    setTimeout(() => {
-      fitAddon.fit();
-    }, 0);
+    // Don't use fit addon - keep the terminal at exactly 24x80 for 3270 compatibility
+    // setTimeout(() => {
+    //   fitAddon.fit();
+    // }, 0);
 
     xtermRef.current = terminal;
     fitAddonRef.current = fitAddon;
@@ -180,18 +180,17 @@ export function TerminalEmulator({ sessionId, onCellClick, recordMode = false }:
   };
 
   return (
-    <div className="relative">
+    <div className="relative h-full">
       <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs z-10 ${isConnected ? 'bg-green-600' : 'bg-red-600'} text-white`}>
         {isConnected ? 'Connected' : 'Disconnected'}
       </div>
       <div
         ref={terminalRef}
-        className="border border-gray-700 rounded"
+        className="border border-gray-700 rounded h-full"
         onClick={handleTerminalClick}
         style={{
           cursor: recordMode ? 'crosshair' : 'text',
-          minHeight: '500px',
-          width: '100%'
+          minHeight: '600px',
         }}
       />
     </div>
