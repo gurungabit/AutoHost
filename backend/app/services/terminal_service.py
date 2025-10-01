@@ -34,20 +34,65 @@ class TerminalSession:
     def _sync_connect(self):
         """Synchronous connection (runs in executor)"""
         import sys
+        import time
+        # Try with specific terminal model (common 3270 models)
         self.connection = Emulator(visible=False)
+
+        # Set common 3270 terminal characteristics
+        try:
+            # Many systems expect IBM-3278-2 or similar
+            print(f"[DEBUG] Setting up emulator options", file=sys.stderr)
+        except Exception as e:
+            print(f"[DEBUG] Emulator setup failed: {e}", file=sys.stderr)
         # Build connection string with TLS if needed
         protocol = "L:" if self.use_tls else ""
         host_string = f"{protocol}{self.host}:{self.port}"
         print(f"[DEBUG] Connecting to: {host_string}", file=sys.stderr)
         self.connection.Connect(host_string)
 
-        # Wait for screen to be ready
+        # Wait for connection to be fully established
+        print(f"[DEBUG] Waiting for connection to stabilize...", file=sys.stderr)
+        time.sleep(2)  # Give time for initial screen
+
+        # Try different methods to get initial screen
         try:
-            self.connection.Wait('InputField')  # Wait for input field to appear
-            print(f"[DEBUG] Connection established, screen ready", file=sys.stderr)
+            # Method 1: Wait for any output
+            print(f"[DEBUG] Trying Wait('Output')", file=sys.stderr)
+            self.connection.Wait('Output', timeout=5)
         except Exception as e:
-            print(f"[DEBUG] Wait failed (this is normal for some screens): {e}", file=sys.stderr)
-            pass
+            print(f"[DEBUG] Wait Output failed: {e}", file=sys.stderr)
+            try:
+                # Method 2: Send Enter to wake up the system
+                print(f"[DEBUG] Sending Enter to wake up system", file=sys.stderr)
+                self.connection.Enter()
+                time.sleep(1)
+            except Exception as e2:
+                print(f"[DEBUG] Enter failed: {e2}", file=sys.stderr)
+
+        # Try to trigger initial screen
+        try:
+            # Some systems need a key press to show login screen
+            print(f"[DEBUG] Sending PF1 to trigger screen", file=sys.stderr)
+            self.connection.PF(1)
+            time.sleep(1)
+        except Exception as e:
+            print(f"[DEBUG] PF1 failed: {e}", file=sys.stderr)
+
+        # Check emulator status
+        try:
+            status = self.connection.Query()
+            print(f"[DEBUG] Emulator status after setup: {status}", file=sys.stderr)
+
+            # Try to get current screen
+            screen_lines = self.connection.Ascii()
+            if isinstance(screen_lines, list) and len(screen_lines) > 0:
+                print(f"[DEBUG] Initial screen has {len(screen_lines)} lines", file=sys.stderr)
+                print(f"[DEBUG] First line after setup: {screen_lines[0]!r}", file=sys.stderr)
+
+        except Exception as e:
+            print(f"[DEBUG] Status check failed: {e}", file=sys.stderr)
+
+        print(f"[DEBUG] Connection setup complete", file=sys.stderr)
 
     async def disconnect(self):
         """Disconnect from the host"""
